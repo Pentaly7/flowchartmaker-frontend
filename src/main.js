@@ -1,10 +1,11 @@
 import './assets/main.css'
 import 'primeicons/primeicons.css'
 
-import { createApp } from 'vue'
-import { createPinia } from 'pinia'
+import {createApp} from 'vue'
+import {createPinia} from 'pinia'
 import PrimeVue from 'primevue/config';
 import Aura from '@primeuix/themes/aura';
+import Ripple from 'primevue/ripple';
 
 import App from './App.vue'
 import router from './router'
@@ -16,7 +17,9 @@ app.use(router)
 app.use(PrimeVue, {
   theme: {
     preset: Aura
-  }
+  },
+  ripple: true
 });
 
+app.directive('ripple', Ripple); // Enable Ripple Directive globally
 app.mount('#app')

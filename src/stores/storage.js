@@ -2,7 +2,7 @@ import {reactive} from 'vue'
 import {defineStore} from 'pinia'
 import axios from "axios";
 
-export const useStorageStore = defineStore('storage', () => {
+export const useStorageStore = defineStore('storageStore', () => {
 
   const api = axios.create({
     baseURL: "http://localhost:8080"
