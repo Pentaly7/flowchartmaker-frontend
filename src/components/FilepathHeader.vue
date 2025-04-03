@@ -1,7 +1,7 @@
 <template>
   <div class="px-5 pt-3 flex gap-3 items-center">
     <Button icon="pi pi-folder" @click="visible = true"></Button>
-    <span class="font-bold text-lg">C://PERSONAL/NOTHING</span>
+    <span class="font-bold text-lg">{{ selectedNode ? selectedNode.path : 'NO FILE SELECTED' }}</span>
     <Drawer v-model:visible="visible" header="Project Browser" @contextmenu="onRightClick($event, '')">
       <Tree v-model:expandedKeys="expandedKeys" :value="storage.list"
             class="w-full" :pt="{
@@ -27,11 +27,12 @@
         <template #default="{node}">
           <span :class="getIcon(node)"/>
           <p class="cursor-pointer font-semibold">{{
-              node.key
+              node.key.split(".")[0]
             }}</p>
         </template>
       </Tree>
     </Drawer>
+    <!--Context menu section-->
     <ContextMenu ref="menu" :model="items">
       <template #item="{ item }">
         <Button v-if="(item.label ==='New File' && rightClickNode) || (item.label ==='New Folder')"
@@ -46,9 +47,9 @@
 
     <!--DIALOG SECTION-->
     <Dialog v-model:visible="dialogVisible" modal :header="`Create New ${dialogType}`" :style="{ width: '25rem' }">
-      <form @submit.prevent="createEntry">
+      <form @submit.prevent="createEntry(dialogType)">
         <div class="flex items-center gap-4 mb-4">
-          <InputText class="flex-auto"/>
+          <InputText v-model="newEntryName" class="flex-auto"/>
         </div>
         <div class="flex justify-end gap-2">
           <Button type="button" label="Cancel" severity="secondary" @click="dialogVisible = false"></Button>
@@ -63,13 +64,17 @@
 import {onBeforeMount, ref} from "vue";
 import {useStorageStore} from "@/stores/storage.js";
 
-const {fetchFlowchart, storage} = useStorageStore()
+const {fetchFlowcharts, storage, createFolder, createFile, fetchFile} = useStorageStore()
 const visible = ref(false);
 const dialogVisible = ref(false)
 const dialogType = ref('')
 const expandedKeys = ref({})
+const newEntryName = ref('')
+
+const emit = defineEmits(['fileSelected'])
 
 const rightClickNode = ref()
+const selectedNode = ref(null)
 const menu = ref();
 const items = ref([
   {
@@ -111,9 +116,14 @@ const onRightClick = (event, node) => {
   menu.value.show(event);
 };
 
-const onTreeContentClick = (node) => {
+const onTreeContentClick = async (node) => {
   if (node.type === 'dir') {
     expandedKeys.value[node.key] = !expandedKeys.value[node.key]
+  } else if (node.type === 'file') {
+    selectedNode.value = node
+    visible.value = false
+    await fetchFile(node)
+    emit('fileSelected')
   }
 }
 
@@ -124,12 +134,29 @@ const getIcon = (node) => {
   return node.type === 'dir' ? 'pi pi-folder' : 'pi pi-file'
 }
 
-const createEntry = () => {
-
+const createEntry = async (type) => {
+  dialogVisible.value = false
+  try {
+    let path = newEntryName.value
+    console.log(rightClickNode.value)
+    if (rightClickNode.value) {
+      path = rightClickNode.value.path + '/' + newEntryName.value
+    }
+    if (type === 'Folder') {
+      await createFolder(path)
+    } else {
+      await createFile(path)
+    }
+    fetchFlowcharts()
+  } catch (error) {
+    console.log(error)
+  } finally {
+    newEntryName.value = ''
+  }
 }
 
 onBeforeMount(() => {
-  fetchFlowchart()
+  fetchFlowcharts()
 })
 </script>
 
