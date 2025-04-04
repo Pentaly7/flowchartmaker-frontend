@@ -55,7 +55,8 @@
     >
       <form @submit.prevent="createEntry(dialogType)">
         <div class="flex items-center gap-4 mb-4">
-          <InputText ref="newEntryRef" autofocus v-model="newEntryName" class="flex-auto"/>
+          <InputText ref="newEntryRef" autofocus v-model="newEntryName" class="flex-auto"
+                     @keydown="preventInvalidChars"/>
         </div>
         <div class="flex justify-end gap-2">
           <Button type="button" label="Cancel" severity="secondary" @click="dialogVisible = false"></Button>
@@ -190,6 +191,15 @@ const saveFlowchart = async () => {
     await saveFile(storage.selectedNode.path, storage.selectedContent)
     storage.contentChanged = false
     fetchFlowcharts()
+  }
+};
+
+// List of invalid characters
+const invalidChars = /[<>:"/\\.,|?*\x00-\x1F]/;
+// Function to remove invalid characters
+const preventInvalidChars = (event) => {
+  if (invalidChars.test(event.key)) {
+    event.preventDefault(); // Block the input
   }
 };
 
