@@ -11,7 +11,8 @@ export const useStorageStore = defineStore('storageStore', () => {
   const storage = reactive({
     list: null,
     selectedNode: {},
-    selectedContent: ''
+    selectedContent: '',
+    contentChanged: false
   })
 
   const fetchFlowcharts = async () => {
@@ -40,6 +41,19 @@ export const useStorageStore = defineStore('storageStore', () => {
       title: title
     })
   }
+  const saveFile = async (path, content) => {
+    const url = "/flowcharts/" + path.split(".")[0]
+    const title = path.split("/").pop()
+    return await api.post(url, {
+      title: title,
+      content: content
+    })
+  }
 
-  return {storage, fetchFlowcharts, createFolder, createFile, fetchFile}
+  const deleteEntry = async (path) => {
+    const url = "/flowcharts/" + path
+    return await api.delete(url)
+  }
+
+  return {storage, fetchFlowcharts, createFolder, createFile, fetchFile, saveFile, deleteEntry}
 })

@@ -1,8 +1,13 @@
 <template>
   <div class="px-5 pt-3 flex gap-3 items-center">
+
     <Button icon="pi pi-folder" @click="visible = true"></Button>
-    <span class="font-bold text-lg">{{ selectedNode ? selectedNode.path : 'NO FILE SELECTED' }}</span>
-    <Drawer v-model:visible="visible" header="Project Browser" @contextmenu="onRightClick($event, '')">
+    <span class="font-bold text-lg flex-1">{{
+        storage.selectedNode.path?.split(".")[0] || 'NO FILE SELECTED'
+      }}</span>
+    <Message v-if="storage.contentChanged" class="" severity="warn">file changed, press ctrl + s to save</Message>
+    <!--Drawer Section    -->
+    <Drawer v-model:visible="visible" header="Project Browser" @contextmenu="onRightClick($event,'')">
       <Tree v-model:expandedKeys="expandedKeys" :value="storage.list"
             class="w-full" :pt="{
               root:{
@@ -18,7 +23,7 @@
         <template #nodeicon="{node}">
           <!-- VERY NOT OPTIMAL, BUT KEEP IT THIS WAY FOR NOW -->
           <Button
-              class="!absolute w-full h-full bg-transparent"
+              class="!absolute w-full h-full z-99"
               variant="text"
               @click="onTreeContentClick(node)"
               @contextmenu="onRightClick($event, node)"
@@ -32,16 +37,16 @@
         </template>
       </Tree>
     </Drawer>
+
     <!--Context menu section-->
     <ContextMenu ref="menu" :model="items">
       <template #item="{ item }">
-        <Button v-if="(item.label ==='New File' && rightClickNode) || (item.label ==='New Folder')"
-                class="p-1 cursor-pointer"
-                unstyled>
+        <Button
+            class="p-1 cursor-pointer"
+            unstyled>
           <span :class="item.icon"/>
           <span class="ml-2">{{ item.label }}</span>
         </Button>
-
       </template>
     </ContextMenu>
 
@@ -61,10 +66,10 @@
 
 </template>
 <script setup>
-import {onBeforeMount, ref} from "vue";
+import {onBeforeMount, onMounted, onUnmounted, ref} from "vue";
 import {useStorageStore} from "@/stores/storage.js";
 
-const {fetchFlowcharts, storage, createFolder, createFile, fetchFile} = useStorageStore()
+const {fetchFlowcharts, storage, createFolder, createFile, fetchFile, saveFile, deleteEntry} = useStorageStore()
 const visible = ref(false);
 const dialogVisible = ref(false)
 const dialogType = ref('')
@@ -76,7 +81,16 @@ const emit = defineEmits(['fileSelected'])
 const rightClickNode = ref()
 const selectedNode = ref(null)
 const menu = ref();
-const items = ref([
+const menuItems = [
+  {
+    label: "New Folder",
+    icon: "pi pi-folder-plus",
+    command: () => {
+      dialogType.value = 'Folder'
+      dialogVisible.value = true
+      menu.value.hide();
+    },
+  },
   {
     label: "New File",
     icon: "pi pi-file-plus",
@@ -87,32 +101,37 @@ const items = ref([
     },
   },
   {
-    label: "New Folder",
-    icon: "pi pi-folder-plus",
-    command: () => {
-      dialogType.value = 'Folder'
-      dialogVisible.value = true
+    separator: true
+  },
+  {
+    label: "Delete",
+    icon: "pi pi-trash",
+    command: async () => {
       menu.value.hide();
+      await deleteEntry(rightClickNode.value.path)
+      fetchFlowcharts()
     },
   },
-]);
+]
+const items = ref([]);
 
 const onRightClick = (event, node) => {
-
-  // prevent right click on file and when global right click on file
-  if (!node && rightClickNode.value?.type === "file") {
-    event.preventDefault();
-    menu.value.hide();
-    rightClickNode.value = node;
+  if (!node && rightClickNode.value?.type === 'file') {
+    rightClickNode.value = node
     return
+  }
+  if (!node) {
+    items.value = menuItems.filter(el => {
+      return el.label === 'New Folder'
+    })
+  } else if (node?.type === 'dir') {
+    items.value = menuItems
+  } else if (node?.type === 'file') {
+    items.value = menuItems.filter(el => {
+      return el.label === 'Delete'
+    })
   }
   rightClickNode.value = node;
-
-  // prevent right click on file
-  if (node?.type === 'file') {
-    event.preventDefault();
-    return
-  }
   menu.value.show(event);
 };
 
@@ -155,8 +174,32 @@ const createEntry = async (type) => {
   }
 }
 
+const handleSaveShortcut = (event) => {
+  if (event.ctrlKey && event.key === 's') {
+    event.preventDefault(); // Prevent browser's default save action
+    console.log("Ctrl + S pressed! Saving...");
+    saveFlowchart(); // Call your function here
+  }
+};
+
+const saveFlowchart = async () => {
+  if (storage.selectedContent) {
+    await saveFile(storage.selectedNode.path, storage.selectedContent)
+    storage.contentChanged = false
+    fetchFlowcharts()
+  }
+};
+
 onBeforeMount(() => {
   fetchFlowcharts()
 })
+
+onMounted(() => {
+  window.addEventListener("keydown", handleSaveShortcut);
+});
+
+onUnmounted(() => {
+  window.removeEventListener("keydown", handleSaveShortcut);
+});
 </script>
 

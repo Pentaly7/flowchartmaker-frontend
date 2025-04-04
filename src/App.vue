@@ -3,14 +3,19 @@
     <FilepathHeader @fileSelected="renderFlowchart"/>
     <Splitter class="w-full h-full">
       <SplitterPanel class="flex items-center justify-center" :size="25">
-        <Textarea v-model="storage.selectedContent" class="w-full h-full" @value-change="renderFlowchart"/>
+        <Textarea
+            :disabled="!storage.selectedNode.key"
+            v-model="storage.selectedContent"
+            class="w-full h-full !border-1 !border-emerald-400 !focus:outline-none !focus:border-emerald-400 disabled:border-none"
+            @value-change="onTextAreaChanged"/>
       </SplitterPanel>
       <SplitterPanel class="flex items-center justify-center" :size="75">
         <div ref="parentContainer" class="w-full h-full overflow-hidden relative">
           <Button icon="pi pi-download" class="!absolute top-5 right-5 z-99 shadow-lg !border !border-gray-500"
                   @click="downloadPNG"/>
           <div ref="flowchartContainer"
-               class="relative bg-white w-full h-auto min-h-full overflow-hidden  flex justify-center"></div>
+               class="relative bg-white w-full h-auto min-h-full overflow-hidden flex justify-center py-10"></div>
+
         </div>
       </SplitterPanel>
     </Splitter>
@@ -20,7 +25,7 @@
 <script setup>
 import FilepathHeader from "@/components/FilepathHeader.vue";
 import flowchart from "flowchart.js";
-import {onMounted, ref} from "vue";
+import {onMounted, onUnmounted, ref} from "vue";
 import {useStorageStore} from "@/stores/storage.js";
 import panzoom from '@panzoom/panzoom'
 
@@ -34,18 +39,23 @@ const renderFlowchart = () => {
   clearTimeout(debounceTimer);
   debounceTimer = setTimeout(() => {
     try {
-      if (!storage.selected) {
+      if (!storage.selectedContent) {
         flowchartContainer.value.innerHTML = "";
         return;
       }
-      const diagram = flowchart.parse(storage.selected);
+      const diagram = flowchart.parse(storage.selectedContent);
       flowchartContainer.value.innerHTML = "";
       diagram.drawSVG(flowchartContainer.value);
     } catch (error) {
-      console.log(error)
+      console.log('invalid flowchart string')
     }
   }, 300); // 300ms debounce delay
 };
+
+const onTextAreaChanged = () => {
+  storage.contentChanged = true
+  renderFlowchart()
+}
 
 
 const downloadPNG = () => {
@@ -79,8 +89,7 @@ const downloadPNG = () => {
     // Convert Canvas to PNG and trigger download
     const link = document.createElement("a");
     link.href = canvas.toDataURL("image/png");
-    const filename = storage.selectedNode.key.split(".")[0] || "flowchart.png";
-    link.download = filename;
+    link.download = storage.selectedNode.key.split(".")[0] || "flowchart.png";
     link.click();
   };
 
@@ -105,5 +114,20 @@ onMounted(() => {
   }
 });
 
+const handleDownloadShortcut = (event) => {
+  if (event.ctrlKey && event.key === 'd') {
+    event.preventDefault(); // Prevent browser's default save action
+    console.log("Ctrl + D pressed! Saving...");
+    downloadPNG(); // Call your function here
+  }
+}
+
+onMounted(() => {
+  window.addEventListener("keydown", handleDownloadShortcut);
+});
+
+onUnmounted(() => {
+  window.removeEventListener("keydown", handleDownloadShortcut);
+});
 </script>
 
