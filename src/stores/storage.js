@@ -5,7 +5,7 @@ import axios from "axios";
 export const useStorageStore = defineStore('storageStore', () => {
 
   const api = axios.create({
-    baseURL: "http://localhost:8080"
+    baseURL: import.meta.env.DEV ? "http://localhost:8080" : "/api"
   })
 
   const storage = reactive({
