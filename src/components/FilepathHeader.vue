@@ -51,10 +51,11 @@
     </ContextMenu>
 
     <!--DIALOG SECTION-->
-    <Dialog v-model:visible="dialogVisible" modal :header="`Create New ${dialogType}`" :style="{ width: '25rem' }">
+    <Dialog v-model:visible="dialogVisible" modal :header="`Create New ${dialogType}`" :style="{ width: '25rem' }"
+    >
       <form @submit.prevent="createEntry(dialogType)">
         <div class="flex items-center gap-4 mb-4">
-          <InputText v-model="newEntryName" class="flex-auto"/>
+          <InputText ref="newEntryRef" autofocus v-model="newEntryName" class="flex-auto"/>
         </div>
         <div class="flex justify-end gap-2">
           <Button type="button" label="Cancel" severity="secondary" @click="dialogVisible = false"></Button>
@@ -75,6 +76,7 @@ const dialogVisible = ref(false)
 const dialogType = ref('')
 const expandedKeys = ref({})
 const newEntryName = ref('')
+const newEntryRef = ref(null)
 
 const emit = defineEmits(['fileSelected'])
 
@@ -181,6 +183,7 @@ const handleSaveShortcut = (event) => {
     saveFlowchart(); // Call your function here
   }
 };
+
 
 const saveFlowchart = async () => {
   if (storage.selectedContent) {
